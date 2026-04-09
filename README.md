@@ -24,7 +24,7 @@ enabling full-repository analysis that goes beyond diff-only reviews.
 Add the marketplace in Claude Code:
 
 ```bash
-/plugin marketplace add google/gemini-plugin-cc
+/plugin marketplace add amuyu/gemini-plugin-cc
 ```
 
 Install the plugin:
