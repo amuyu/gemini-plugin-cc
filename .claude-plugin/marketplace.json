@@ -1,0 +1,21 @@
+{
+  "name": "google-gemini",
+  "owner": {
+    "name": "Google"
+  },
+  "metadata": {
+    "description": "Gemini plugin for Claude Code — code review and codebase analysis.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "gemini",
+      "description": "Use Gemini from Claude Code for code review and codebase analysis.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Google"
+      },
+      "source": "./plugins/gemini"
+    }
+  ]
+}
