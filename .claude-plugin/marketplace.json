@@ -1,7 +1,7 @@
 {
-  "name": "google-gemini",
+  "name": "amuyu-gemini",
   "owner": {
-    "name": "Google"
+    "name": "amuyu"
   },
   "metadata": {
     "description": "Gemini plugin for Claude Code — code review and codebase analysis.",
@@ -13,7 +13,7 @@
       "description": "Use Gemini from Claude Code for code review and codebase analysis.",
       "version": "0.1.0",
       "author": {
-        "name": "Google"
+        "name": "amuyu"
       },
       "source": "./plugins/gemini"
     }

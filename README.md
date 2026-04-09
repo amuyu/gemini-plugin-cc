@@ -30,7 +30,7 @@ Add the marketplace in Claude Code:
 Install the plugin:
 
 ```bash
-/plugin install gemini@google-gemini
+/plugin install gemini@amuyu-gemini
 ```
 
 Reload plugins:
