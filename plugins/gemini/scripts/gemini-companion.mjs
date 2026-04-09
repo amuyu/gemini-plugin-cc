@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
@@ -128,11 +129,12 @@ async function main() {
   switch (subcommand) {
     case "review": {
       const baseIndex = args.indexOf("--base");
-      if (baseIndex !== -1 && !args[baseIndex + 1]) {
+      const baseValue = args[baseIndex + 1];
+      if (baseIndex !== -1 && (!baseValue || baseValue.startsWith("--"))) {
         process.stderr.write("--base requires a ref argument\n");
         process.exit(1);
       }
-      const base = baseIndex !== -1 ? args[baseIndex + 1] : null;
+      const base = baseIndex !== -1 ? baseValue : null;
 
       let diff;
       try {
@@ -170,7 +172,7 @@ async function main() {
   }
 }
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+const isMain = realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (isMain) {
   main().catch((err) => {
     process.stderr.write(`${err.message}\n`);
