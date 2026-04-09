@@ -68,11 +68,29 @@ describe("PROMPTS", () => {
   it("architecture prompt mentions dependencies", () => {
     assert.match(PROMPTS.architecture, /dependenc/i);
   });
+
+  it("fullrepoReview prompt mentions codebase", () => {
+    assert.match(PROMPTS.fullrepoReview, /codebase/i);
+  });
 });
 
 describe("checkGeminiAvailable", () => {
   it("returns a boolean", () => {
     const result = checkGeminiAvailable();
     assert.equal(typeof result, "boolean");
+  });
+});
+
+describe("review --base validation", () => {
+  it("exits with code 1 when --base has no value", () => {
+    let threw = false;
+    try {
+      execFileSync("node", [COMPANION, "review", "--base"], { encoding: "utf8", stdio: "pipe" });
+    } catch (err) {
+      threw = true;
+      assert.equal(err.status, 1);
+      assert.match(err.stderr, /--base requires a ref argument/);
+    }
+    assert.ok(threw, "should have thrown");
   });
 });
