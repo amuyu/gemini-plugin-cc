@@ -2,12 +2,13 @@
 
 import { spawn, execFileSync } from "node:child_process";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 // ─── Gemini CLI 가용성 체크 ───────────────────────────────────────────────
 
 export function checkGeminiAvailable() {
   try {
-    execFileSync("which", ["gemini"], { stdio: "ignore" });
+    execFileSync("gemini", ["--version"], { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -127,6 +128,10 @@ async function main() {
   switch (subcommand) {
     case "review": {
       const baseIndex = args.indexOf("--base");
+      if (baseIndex !== -1 && !args[baseIndex + 1]) {
+        process.stderr.write("--base requires a ref argument\n");
+        process.exit(1);
+      }
       const base = baseIndex !== -1 ? args[baseIndex + 1] : null;
 
       let diff;
@@ -165,7 +170,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  process.stderr.write(`${err.message}\n`);
-  process.exit(1);
-});
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  main().catch((err) => {
+    process.stderr.write(`${err.message}\n`);
+    process.exit(1);
+  });
+}
