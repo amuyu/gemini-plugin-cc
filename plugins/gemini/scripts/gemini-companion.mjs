@@ -136,8 +136,9 @@ async function main() {
 
   switch (subcommand) {
     case "review": {
-      const baseIndex = args.indexOf("--base");
-      const baseValue = args[baseIndex + 1];
+      const { ko, remaining: reviewArgs } = extractKoFlag(args);
+      const baseIndex = reviewArgs.indexOf("--base");
+      const baseValue = reviewArgs[baseIndex + 1];
       if (baseIndex !== -1 && (!baseValue || baseValue.startsWith("--"))) {
         process.stderr.write("--base requires a ref argument\n");
         process.exit(1);
@@ -157,21 +158,39 @@ async function main() {
         process.exit(0);
       }
 
-      await runGemini(PROMPTS.review, diff);
+      const reviewPrompt = ko
+        ? PROMPTS.review + "\n\nRespond entirely in Korean."
+        : PROMPTS.review;
+      await runGemini(reviewPrompt, diff);
       break;
     }
 
-    case "fullrepo-review":
-      await runGemini(PROMPTS.fullrepoReview, null);
+    case "fullrepo-review": {
+      const { ko } = extractKoFlag(args);
+      const fullrepoPrompt = ko
+        ? PROMPTS.fullrepoReview + "\n\nRespond entirely in Korean."
+        : PROMPTS.fullrepoReview;
+      await runGemini(fullrepoPrompt, null);
       break;
+    }
 
-    case "architecture":
-      await runGemini(PROMPTS.architecture, null);
+    case "architecture": {
+      const { ko } = extractKoFlag(args);
+      const archPrompt = ko
+        ? PROMPTS.architecture + "\n\nRespond entirely in Korean."
+        : PROMPTS.architecture;
+      await runGemini(archPrompt, null);
       break;
+    }
 
-    case "security-audit":
-      await runGemini(PROMPTS.securityAudit, null);
+    case "security-audit": {
+      const { ko } = extractKoFlag(args);
+      const auditPrompt = ko
+        ? PROMPTS.securityAudit + "\n\nRespond entirely in Korean."
+        : PROMPTS.securityAudit;
+      await runGemini(auditPrompt, null);
       break;
+    }
 
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand}\n`);
@@ -180,7 +199,14 @@ async function main() {
   }
 }
 
-const isMain = realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+let isMain = false;
+try {
+  isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+} catch {
+  // If we can't determine isMain, assume we're not the entry point
+  isMain = false;
+}
+
 if (isMain) {
   main().catch((err) => {
     process.stderr.write(`${err.message}\n`);

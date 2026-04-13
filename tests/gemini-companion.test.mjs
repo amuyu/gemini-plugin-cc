@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { collectGitDiff, PROMPTS, checkGeminiAvailable, extractKoFlag } from "../plugins/gemini/scripts/gemini-companion.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const COMPANION = path.resolve(__dirname, "../plugins/gemini/scripts/gemini-companion.mjs");
+// Use absolute path for COMPANION since it's called as a separate process
+const COMPANION = path.join(__dirname, "..", "plugins", "gemini", "scripts", "gemini-companion.mjs");
 
 describe("gemini-companion", () => {
   describe("unknown subcommand", () => {
@@ -48,7 +49,14 @@ describe("collectGitDiff", () => {
   it("throws when invalid base ref given", () => {
     let threw = false;
     try {
-      collectGitDiff("nonexistent-branch-xyz-123");
+      // Suppress stderr to avoid test output pollution
+      const originalWrite = process.stderr.write;
+      process.stderr.write = () => true;
+      try {
+        collectGitDiff("nonexistent-branch-xyz-123");
+      } finally {
+        process.stderr.write = originalWrite;
+      }
     } catch {
       threw = true;
     }
@@ -124,5 +132,41 @@ describe("extractKoFlag", () => {
     const { ko, remaining } = extractKoFlag([]);
     assert.equal(ko, false);
     assert.deepEqual(remaining, []);
+  });
+});
+
+describe("review --base validation with --ko", () => {
+  it("--base still requires a value when --ko is present", () => {
+    let threw = false;
+    try {
+      execFileSync("node", [COMPANION, "review", "--ko", "--base"], {
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+    } catch (err) {
+      threw = true;
+      assert.equal(err.status, 1);
+      assert.match(err.stderr, /--base requires a ref argument/);
+    }
+    assert.ok(threw, "should have thrown");
+  });
+
+  it("--ko alone does not break --base validation path (no diff = exit 0 message)", () => {
+    // This test validates --ko is stripped before --base parsing.
+    // We cannot run gemini in CI, so we just confirm --ko doesn't cause a
+    // parse error when gemini is unavailable (exits 1 with gemini message,
+    // not with --base error).
+    let result;
+    try {
+      result = execFileSync("node", [COMPANION, "review", "--ko"], {
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+      // If gemini is available and there's no diff, we get a clean exit
+      assert.equal(typeof result, "string");
+    } catch (err) {
+      // If gemini not installed: exits 1 with gemini message (not --base error)
+      assert.notMatch(err.stderr || "", /--base requires a ref argument/);
+    }
   });
 });
