@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { collectGitDiff, PROMPTS, checkGeminiAvailable } from "../plugins/gemini/scripts/gemini-companion.mjs";
+import { collectGitDiff, PROMPTS, checkGeminiAvailable, extractKoFlag } from "../plugins/gemini/scripts/gemini-companion.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const COMPANION = path.resolve(__dirname, "../plugins/gemini/scripts/gemini-companion.mjs");
@@ -92,5 +92,37 @@ describe("review --base validation", () => {
       assert.match(err.stderr, /--base requires a ref argument/);
     }
     assert.ok(threw, "should have thrown");
+  });
+});
+
+describe("extractKoFlag", () => {
+  it("returns ko=false and unchanged args when --ko absent", () => {
+    const { ko, remaining } = extractKoFlag(["--base", "main"]);
+    assert.equal(ko, false);
+    assert.deepEqual(remaining, ["--base", "main"]);
+  });
+
+  it("returns ko=true and removes --ko from args", () => {
+    const { ko, remaining } = extractKoFlag(["--ko"]);
+    assert.equal(ko, true);
+    assert.deepEqual(remaining, []);
+  });
+
+  it("removes --ko regardless of position", () => {
+    const { ko, remaining } = extractKoFlag(["--base", "main", "--ko"]);
+    assert.equal(ko, true);
+    assert.deepEqual(remaining, ["--base", "main"]);
+  });
+
+  it("removes --ko when it appears before --base", () => {
+    const { ko, remaining } = extractKoFlag(["--ko", "--base", "main"]);
+    assert.equal(ko, true);
+    assert.deepEqual(remaining, ["--base", "main"]);
+  });
+
+  it("handles empty args", () => {
+    const { ko, remaining } = extractKoFlag([]);
+    assert.equal(ko, false);
+    assert.deepEqual(remaining, []);
   });
 });

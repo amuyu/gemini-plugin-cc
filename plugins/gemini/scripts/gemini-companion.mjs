@@ -93,6 +93,14 @@ Rate each finding by severity: Critical / High / Medium / Low.
 For each finding provide: location, description, and remediation steps.`,
 };
 
+// ─── 플래그 파싱 ──────────────────────────────────────────────────────────
+
+export function extractKoFlag(args) {
+  const ko = args.includes("--ko");
+  const remaining = args.filter((a) => a !== "--ko");
+  return { ko, remaining };
+}
+
 // ─── 메인 ─────────────────────────────────────────────────────────────────
 
 function printUsage() {
