@@ -15,7 +15,7 @@ Core constraint:
 Execution:
 - Run:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/gemini-companion.mjs" architecture
+node "${CLAUDE_PLUGIN_ROOT}/scripts/gemini-companion.mjs" architecture "$ARGUMENTS"
 ```
 - Return the command stdout verbatim, exactly as-is.
 - Do not paraphrase, summarize, or add commentary before or after it.
