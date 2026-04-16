@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Gemini plugin for Claude Code — code review and codebase analysis.",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "gemini",
       "description": "Use Gemini from Claude Code for code review and codebase analysis.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": {
         "name": "amuyu"
       },
