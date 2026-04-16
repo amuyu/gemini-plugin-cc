@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { collectGitDiff, PROMPTS, checkGeminiAvailable, extractKoFlag } from "../plugins/gemini/scripts/gemini-companion.mjs";
+import { collectGitDiff, PROMPTS, checkGeminiAvailable, extractKoFlag, extractModelFlag } from "../plugins/gemini/scripts/gemini-companion.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use absolute path for COMPANION since it's called as a separate process
@@ -131,6 +131,46 @@ describe("extractKoFlag", () => {
   it("handles empty args", () => {
     const { ko, remaining } = extractKoFlag([]);
     assert.equal(ko, false);
+    assert.deepEqual(remaining, []);
+  });
+});
+
+describe("extractModelFlag", () => {
+  it("returns model=null and unchanged args when --model absent", () => {
+    const { model, remaining } = extractModelFlag(["--base", "main"]);
+    assert.equal(model, null);
+    assert.deepEqual(remaining, ["--base", "main"]);
+  });
+
+  it("extracts model value and removes --model <value> from args", () => {
+    const { model, remaining } = extractModelFlag(["--model", "gemini-2.0-flash"]);
+    assert.equal(model, "gemini-2.0-flash");
+    assert.deepEqual(remaining, []);
+  });
+
+  it("removes --model and its value regardless of position", () => {
+    const { model, remaining } = extractModelFlag(["--base", "main", "--model", "gemini-2.0-flash"]);
+    assert.equal(model, "gemini-2.0-flash");
+    assert.deepEqual(remaining, ["--base", "main"]);
+  });
+
+  it("throws when --model has no value", () => {
+    assert.throws(
+      () => extractModelFlag(["--model"]),
+      /--model requires a model name argument/
+    );
+  });
+
+  it("throws when --model is followed by another flag", () => {
+    assert.throws(
+      () => extractModelFlag(["--model", "--base"]),
+      /--model requires a model name argument/
+    );
+  });
+
+  it("handles empty args", () => {
+    const { model, remaining } = extractModelFlag([]);
+    assert.equal(model, null);
     assert.deepEqual(remaining, []);
   });
 });

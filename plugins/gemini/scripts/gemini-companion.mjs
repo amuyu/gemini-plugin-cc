@@ -29,34 +29,58 @@ export function collectGitDiff(base) {
 
 // ─── Gemini CLI 실행 ──────────────────────────────────────────────────────
 
-export function runGemini(prompt, input) {
-  return new Promise((resolve, reject) => {
-    const args = ["-p", prompt, "--approval-mode", "plan"];
-    const child = spawn("gemini", args, {
-      stdio: ["pipe", "inherit", "inherit"]
-    });
+export function runGemini(prompt, input, { model = null, maxRetries = 3, retryDelayMs = 10000 } = {}) {
+  const attempt = (attemptsLeft) =>
+    new Promise((resolve, reject) => {
+      const args = ["-p", prompt, "--approval-mode", "plan"];
+      if (model) args.push("--model", model);
 
-    if (input) {
-      child.stdin.write(input);
-    }
-    child.stdin.end();
+      const child = spawn("gemini", args, {
+        stdio: ["pipe", "inherit", "pipe"],
+      });
 
-    child.on("exit", (code) => {
-      if (code !== 0) {
-        reject(new Error(`gemini exited with code ${code}`));
-      } else {
-        resolve();
+      let stderrData = "";
+      child.stderr.on("data", (chunk) => {
+        stderrData += chunk.toString();
+        process.stderr.write(chunk);
+      });
+
+      if (input) {
+        child.stdin.write(input);
       }
+      child.stdin.end();
+
+      child.on("exit", (code) => {
+        if (code !== 0) {
+          const is429 =
+            stderrData.includes("429") ||
+            stderrData.includes("RESOURCE_EXHAUSTED");
+          if (is429 && attemptsLeft > 1) {
+            const delay = retryDelayMs * Math.pow(2, maxRetries - attemptsLeft);
+            process.stderr.write(
+              `\n429 RESOURCE_EXHAUSTED — ${delay / 1000}초 후 재시도합니다... (남은 시도: ${attemptsLeft - 1})\n`
+            );
+            setTimeout(() => {
+              attempt(attemptsLeft - 1).then(resolve).catch(reject);
+            }, delay);
+          } else {
+            reject(new Error(`gemini exited with code ${code}`));
+          }
+        } else {
+          resolve();
+        }
+      });
+
+      child.on("error", (err) => {
+        if (err.code === "ENOENT") {
+          reject(new Error("gemini CLI를 찾을 수 없습니다."));
+        } else {
+          reject(err);
+        }
+      });
     });
 
-    child.on("error", (err) => {
-      if (err.code === "ENOENT") {
-        reject(new Error("gemini CLI를 찾을 수 없습니다."));
-      } else {
-        reject(err);
-      }
-    });
-  });
+  return attempt(maxRetries);
 }
 
 // ─── 프롬프트 ─────────────────────────────────────────────────────────────
@@ -101,16 +125,30 @@ export function extractKoFlag(args) {
   return { ko, remaining };
 }
 
+export function extractModelFlag(args) {
+  const idx = args.indexOf("--model");
+  if (idx === -1) return { model: null, remaining: args };
+  const value = args[idx + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error("--model requires a model name argument");
+  }
+  const remaining = [...args.slice(0, idx), ...args.slice(idx + 2)];
+  return { model: value, remaining };
+}
+
 // ─── 메인 ─────────────────────────────────────────────────────────────────
 
 function printUsage() {
   process.stderr.write(
     [
       "Usage:",
-      "  node gemini-companion.mjs review [--base <ref>]",
-      "  node gemini-companion.mjs fullrepo-review",
-      "  node gemini-companion.mjs architecture",
-      "  node gemini-companion.mjs security-audit",
+      "  node gemini-companion.mjs review [--base <ref>] [--model <model>]",
+      "  node gemini-companion.mjs fullrepo-review [--model <model>]",
+      "  node gemini-companion.mjs architecture [--model <model>]",
+      "  node gemini-companion.mjs security-audit [--model <model>]",
+      "",
+      "Options:",
+      "  --model <model>  Gemini 모델 지정 (예: gemini-2.0-flash)",
     ].join("\n") + "\n"
   );
 }
@@ -134,11 +172,13 @@ async function main() {
     process.exit(1);
   }
 
+  const { ko, remaining: afterKo } = extractKoFlag(args);
+  const { model, remaining: parsedArgs } = extractModelFlag(afterKo);
+
   switch (subcommand) {
     case "review": {
-      const { ko, remaining: reviewArgs } = extractKoFlag(args);
-      const baseIndex = reviewArgs.indexOf("--base");
-      const baseValue = reviewArgs[baseIndex + 1];
+      const baseIndex = parsedArgs.indexOf("--base");
+      const baseValue = parsedArgs[baseIndex + 1];
       if (baseIndex !== -1 && (!baseValue || baseValue.startsWith("--"))) {
         process.stderr.write("--base requires a ref argument\n");
         process.exit(1);
@@ -161,34 +201,31 @@ async function main() {
       const reviewPrompt = ko
         ? PROMPTS.review + "\n\nRespond entirely in Korean."
         : PROMPTS.review;
-      await runGemini(reviewPrompt, diff);
+      await runGemini(reviewPrompt, diff, { model });
       break;
     }
 
     case "fullrepo-review": {
-      const { ko } = extractKoFlag(args);
       const fullrepoPrompt = ko
         ? PROMPTS.fullrepoReview + "\n\nRespond entirely in Korean."
         : PROMPTS.fullrepoReview;
-      await runGemini(fullrepoPrompt, null);
+      await runGemini(fullrepoPrompt, null, { model });
       break;
     }
 
     case "architecture": {
-      const { ko } = extractKoFlag(args);
       const archPrompt = ko
         ? PROMPTS.architecture + "\n\nRespond entirely in Korean."
         : PROMPTS.architecture;
-      await runGemini(archPrompt, null);
+      await runGemini(archPrompt, null, { model });
       break;
     }
 
     case "security-audit": {
-      const { ko } = extractKoFlag(args);
       const auditPrompt = ko
         ? PROMPTS.securityAudit + "\n\nRespond entirely in Korean."
         : PROMPTS.securityAudit;
-      await runGemini(auditPrompt, null);
+      await runGemini(auditPrompt, null, { model });
       break;
     }
 
