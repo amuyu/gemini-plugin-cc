@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import os from "node:os";
 import { collectGitDiff, PROMPTS, checkGeminiAvailable, extractKoFlag, extractModelFlag } from "../plugins/gemini/scripts/gemini-companion.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -241,5 +243,46 @@ describe("review --base validation with --ko", () => {
       // If gemini not installed: exits 1 with gemini message (not --base error)
       assert.notMatch(err.stderr || "", /--base requires a ref argument/);
     }
+  });
+});
+
+describe("review path branch (fake gemini)", () => {
+  it("passes pathReview prompt containing given paths to gemini", () => {
+    // fake gemini: -p 플래그 값을 파일에 기록하고 exit 0
+    const tmpDir = mkdtempSync(path.join(os.tmpdir(), "fake-gemini-"));
+    const promptFile = path.join(tmpDir, "prompt.txt");
+    const fakeGeminiPath = path.join(tmpDir, "gemini");
+
+    writeFileSync(
+      fakeGeminiPath,
+      `#!/bin/sh
+# -p <prompt> --approval-mode plan 형태로 호출됨
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -p) printf '%s\\n' "$2" > "${promptFile}"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+exit 0
+`,
+      { mode: 0o755 }
+    );
+
+    execFileSync(
+      "node",
+      [COMPANION, "review", "src/utils/", "src/api.js"],
+      {
+        encoding: "utf8",
+        stdio: "pipe",
+        env: { ...process.env, PATH: `${tmpDir}:${process.env.PATH}` },
+      }
+    );
+
+    assert.ok(existsSync(promptFile), "fake gemini should have been called");
+    const prompt = readFileSync(promptFile, "utf8");
+    assert.match(prompt, /src\/utils\//);
+    assert.match(prompt, /src\/api\.js/);
+    // git diff 경로로 빠지지 않았는지 확인
+    assert.doesNotMatch(prompt, /git diff/i);
   });
 });
