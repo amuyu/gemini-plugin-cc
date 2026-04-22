@@ -92,6 +92,9 @@ Be specific and actionable. Format your output clearly with sections.
 
 Here is the diff to review:`,
 
+  pathReview: (paths) =>
+    `You are a senior code reviewer. Review the following paths:\n${paths.join("\n")}\n\nUse your file reading tools to read and analyze these files and directories.\nFocus on: bugs, security issues, performance problems, and code quality.\nBe specific and actionable. Format your output clearly with sections.`,
+
   fullrepoReview: `You are a senior code reviewer. Review the entire codebase in the current directory.
 Use your file reading tools to explore all source files. Focus on: code quality, architecture, bugs, and improvement opportunities.
 Be specific and actionable. Provide a structured report.`,

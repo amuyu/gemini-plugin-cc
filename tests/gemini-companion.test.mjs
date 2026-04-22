@@ -80,6 +80,22 @@ describe("PROMPTS", () => {
   it("fullrepoReview prompt mentions codebase", () => {
     assert.match(PROMPTS.fullrepoReview, /codebase/i);
   });
+
+  it("pathReview is a function", () => {
+    assert.equal(typeof PROMPTS.pathReview, "function");
+  });
+
+  it("pathReview includes given paths in output", () => {
+    const result = PROMPTS.pathReview(["src/utils/", "src/api.js"]);
+    assert.match(result, /src\/utils\//);
+    assert.match(result, /src\/api\.js/);
+  });
+
+  it("pathReview includes review instructions", () => {
+    const result = PROMPTS.pathReview(["src/"]);
+    assert.match(result, /code reviewer/i);
+    assert.match(result, /file reading tools/i);
+  });
 });
 
 describe("checkGeminiAvailable", () => {
