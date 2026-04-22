@@ -194,7 +194,11 @@ async function main() {
       }
 
       if (!diff.trim()) {
-        process.stdout.write("리뷰할 변경사항이 없습니다.\n");
+        process.stdout.write(
+          "리뷰할 변경사항이 없습니다.\n" +
+          "브랜치 전체를 리뷰하려면 --base 옵션으로 비교 기준 브랜치를 지정하세요.\n" +
+          "예: /gemini:review --base main\n"
+        );
         process.exit(0);
       }
 
