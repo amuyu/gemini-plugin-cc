@@ -145,7 +145,7 @@ function printUsage() {
   process.stderr.write(
     [
       "Usage:",
-      "  node gemini-companion.mjs review [--base <ref>] [--model <model>]",
+      "  node gemini-companion.mjs review [paths...] [--base <ref>] [--model <model>] [--ko]",
       "  node gemini-companion.mjs fullrepo-review [--model <model>]",
       "  node gemini-companion.mjs architecture [--model <model>]",
       "  node gemini-companion.mjs security-audit [--model <model>]",
