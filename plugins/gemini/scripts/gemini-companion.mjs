@@ -164,6 +164,33 @@ async function main() {
     process.exit(1);
   }
 
+  const { ko, remaining: afterKo } = extractKoFlag(args);
+  const { model, remaining: parsedArgs } = extractModelFlag(afterKo);
+
+  // ── review 인수를 gemini 체크 전에 파싱/검증 ──────────────────────────
+  let reviewBase = null;
+  let reviewPaths = [];
+
+  if (subcommand === "review") {
+    const baseIndex = parsedArgs.indexOf("--base");
+    const baseValue = parsedArgs[baseIndex + 1];
+    if (baseIndex !== -1 && (!baseValue || baseValue.startsWith("--"))) {
+      process.stderr.write("--base requires a ref argument\n");
+      process.exit(1);
+    }
+    reviewBase = baseIndex !== -1 ? baseValue : null;
+    reviewPaths =
+      baseIndex !== -1
+        ? [...parsedArgs.slice(0, baseIndex), ...parsedArgs.slice(baseIndex + 2)]
+        : [...parsedArgs];
+
+    if (reviewPaths.length > 0 && reviewBase) {
+      process.stderr.write("--base와 경로는 함께 사용할 수 없습니다\n");
+      process.exit(1);
+    }
+  }
+
+  // ── Gemini CLI 가용성 체크 ──────────────────────────────────────────────
   if (!checkGeminiAvailable()) {
     process.stderr.write(
       [
@@ -175,22 +202,22 @@ async function main() {
     process.exit(1);
   }
 
-  const { ko, remaining: afterKo } = extractKoFlag(args);
-  const { model, remaining: parsedArgs } = extractModelFlag(afterKo);
-
   switch (subcommand) {
     case "review": {
-      const baseIndex = parsedArgs.indexOf("--base");
-      const baseValue = parsedArgs[baseIndex + 1];
-      if (baseIndex !== -1 && (!baseValue || baseValue.startsWith("--"))) {
-        process.stderr.write("--base requires a ref argument\n");
-        process.exit(1);
+      // 경로 기반 리뷰
+      if (reviewPaths.length > 0) {
+        const basePrompt = PROMPTS.pathReview(reviewPaths);
+        const pathPrompt = ko
+          ? basePrompt + "\n\nRespond entirely in Korean."
+          : basePrompt;
+        await runGemini(pathPrompt, null, { model });
+        break;
       }
-      const base = baseIndex !== -1 ? baseValue : null;
 
+      // git diff 리뷰 (기존 동작)
       let diff;
       try {
-        diff = collectGitDiff(base);
+        diff = collectGitDiff(reviewBase);
       } catch (err) {
         process.stderr.write(`git diff 수집 실패: ${err.message}\n`);
         process.exit(1);
@@ -199,8 +226,8 @@ async function main() {
       if (!diff.trim()) {
         process.stdout.write(
           "리뷰할 변경사항이 없습니다.\n" +
-          "브랜치 전체를 리뷰하려면 --base 옵션으로 비교 기준 브랜치를 지정하세요.\n" +
-          "예: /gemini:review --base main\n"
+            "브랜치 전체를 리뷰하려면 --base 옵션으로 비교 기준 브랜치를 지정하세요.\n" +
+            "예: /gemini:review --base main\n"
         );
         process.exit(0);
       }

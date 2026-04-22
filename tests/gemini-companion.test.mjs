@@ -191,6 +191,23 @@ describe("extractModelFlag", () => {
   });
 });
 
+describe("review paths + --base conflict", () => {
+  it("exits with code 1 when paths and --base are both given", () => {
+    let threw = false;
+    try {
+      execFileSync("node", [COMPANION, "review", "src/", "--base", "main"], {
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+    } catch (err) {
+      threw = true;
+      assert.equal(err.status, 1);
+      assert.match(err.stderr, /--base와 경로는 함께 사용할 수 없습니다/);
+    }
+    assert.ok(threw, "should have thrown");
+  });
+});
+
 describe("review --base validation with --ko", () => {
   it("--base still requires a value when --ko is present", () => {
     let threw = false;
