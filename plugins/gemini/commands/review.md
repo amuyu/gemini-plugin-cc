@@ -1,6 +1,6 @@
 ---
 description: Run a Gemini code review against current git changes
-argument-hint: '[--base <ref>]'
+argument-hint: '[paths...] [--base <ref>] [--model <model>] [--ko]'
 disable-model-invocation: true
 allowed-tools: Bash(node:*), Bash(git:*)
 ---
