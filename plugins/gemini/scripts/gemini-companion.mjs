@@ -32,11 +32,12 @@ export function collectGitDiff(base) {
 export function runGemini(prompt, input, { model = null, maxRetries = 3, retryDelayMs = 10000 } = {}) {
   const attempt = (attemptsLeft) =>
     new Promise((resolve, reject) => {
-      const args = ["-p", prompt, "--approval-mode", "plan"];
+      const fullPrompt = input ? `${prompt}\n\n${input}` : prompt;
+      const args = ["-p", fullPrompt, "--approval-mode", "auto"];
       if (model) args.push("--model", model);
 
       const child = spawn("gemini", args, {
-        stdio: ["pipe", "inherit", "pipe"],
+        stdio: ["ignore", "inherit", "pipe"],
       });
 
       let stderrData = "";
@@ -44,11 +45,6 @@ export function runGemini(prompt, input, { model = null, maxRetries = 3, retryDe
         stderrData += chunk.toString();
         process.stderr.write(chunk);
       });
-
-      if (input) {
-        child.stdin.write(input);
-      }
-      child.stdin.end();
 
       child.on("exit", (code) => {
         if (code !== 0) {
