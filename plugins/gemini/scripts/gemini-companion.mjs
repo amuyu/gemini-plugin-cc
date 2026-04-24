@@ -179,10 +179,11 @@ async function main() {
       process.exit(1);
     }
     reviewBase = baseIndex !== -1 ? baseValue : null;
-    reviewPaths =
+    reviewPaths = (
       baseIndex !== -1
         ? [...parsedArgs.slice(0, baseIndex), ...parsedArgs.slice(baseIndex + 2)]
-        : [...parsedArgs];
+        : [...parsedArgs]
+    ).filter((p) => p.trim() !== "");
 
     if (reviewPaths.length > 0 && reviewBase) {
       process.stderr.write("--base와 경로는 함께 사용할 수 없습니다\n");
